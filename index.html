@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BookBrain</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div id="app">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h1 class="logo">BookBrain</h1>
+        <p class="tagline">Test what you've read</p>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="nav-item active" data-view="quiz">
+          <span class="nav-icon">&#9998;</span> Quiz
+        </button>
+        <button class="nav-item" data-view="library">
+          <span class="nav-icon">&#9776;</span> Library
+        </button>
+        <button class="nav-item" data-view="stats">
+          <span class="nav-icon">&#9733;</span> Stats
+        </button>
+      </nav>
+      <div class="sidebar-footer">
+        <p class="book-count"><span id="bookCountDisplay">0</span> books</p>
+      </div>
+    </aside>
+
+    <main class="main-content">
+
+      <!-- QUIZ VIEW -->
+      <section id="view-quiz" class="view active">
+        <div id="quiz-setup" class="card">
+          <h2>Start a Quiz</h2>
+
+          <div class="form-group">
+            <label>Book</label>
+            <div class="book-selector">
+              <button class="selector-btn active" id="btn-random">Random from library</button>
+              <button class="selector-btn" id="btn-pick">Pick a book</button>
+            </div>
+            <select id="bookSelect" class="hidden">
+              <option value="">— choose a book —</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Difficulty</label>
+            <div class="difficulty-selector">
+              <button class="diff-btn" data-level="recall">
+                <strong>Recall</strong>
+                <span>Plot, characters, facts</span>
+              </button>
+              <button class="diff-btn active" data-level="deep">
+                <strong>Deep Dive</strong>
+                <span>Themes, argument, craft</span>
+              </button>
+              <button class="diff-btn" data-level="apply">
+                <strong>Apply It</strong>
+                <span>Connect to your life</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="questionCount">Questions: <span id="qCountLabel">5</span></label>
+            <input type="range" id="questionCount" min="1" max="20" value="5" />
+          </div>
+
+          <button id="startQuizBtn" class="btn-primary">Generate Quiz</button>
+          <p id="quizError" class="error-msg hidden"></p>
+        </div>
+
+        <div id="quiz-loading" class="card hidden">
+          <div class="loader"></div>
+          <p>Generating your questions…</p>
+        </div>
+
+        <div id="quiz-active" class="hidden">
+          <div class="quiz-progress">
+            <span id="progressText">Question 1 of 5</span>
+            <div class="progress-bar"><div id="progressFill"></div></div>
+          </div>
+          <div id="quiz-book-label" class="quiz-book-label"></div>
+          <div id="questionCard" class="card question-card">
+            <p id="questionText" class="question-text"></p>
+            <textarea id="answerInput" placeholder="Your answer…" rows="5"></textarea>
+            <button id="submitAnswerBtn" class="btn-primary">Submit Answer</button>
+          </div>
+          <div id="feedbackCard" class="card feedback-card hidden">
+            <div id="feedbackIcon" class="feedback-icon"></div>
+            <p id="feedbackText"></p>
+            <button id="nextBtn" class="btn-secondary">Next Question</button>
+          </div>
+        </div>
+
+        <div id="quiz-results" class="card hidden">
+          <h2>Quiz Complete</h2>
+          <div id="resultsBook" class="results-book"></div>
+          <div class="score-display">
+            <span id="scoreNum" class="score-num"></span>
+            <span class="score-label">correct</span>
+          </div>
+          <div id="resultsList" class="results-list"></div>
+          <div class="results-actions">
+            <button id="retakeBtn" class="btn-secondary">Retake</button>
+            <button id="newQuizBtn" class="btn-primary">New Quiz</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- LIBRARY VIEW -->
+      <section id="view-library" class="view hidden">
+        <div class="view-header">
+          <h2>Your Library</h2>
+          <div class="header-actions">
+            <button id="importCsvBtn" class="btn-secondary">Import StoryGraph CSV</button>
+            <button id="addBookBtn" class="btn-primary">+ Add Book</button>
+          </div>
+        </div>
+
+        <input type="file" id="csvFileInput" accept=".csv" class="hidden" />
+
+        <div id="addBookForm" class="card hidden">
+          <h3>Add a Book</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="newTitle">Title *</label>
+              <input type="text" id="newTitle" placeholder="Book title" />
+            </div>
+            <div class="form-group">
+              <label for="newAuthor">Author *</label>
+              <input type="text" id="newAuthor" placeholder="Author name" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="newGenre">Genre</label>
+              <input type="text" id="newGenre" placeholder="e.g. History, Science" />
+            </div>
+            <div class="form-group">
+              <label for="newYear">Year Read</label>
+              <input type="number" id="newYear" placeholder="2024" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="newNotes">Notes (optional)</label>
+            <textarea id="newNotes" rows="3" placeholder="Anything you remember about it…"></textarea>
+          </div>
+          <div class="form-actions">
+            <button id="cancelAddBtn" class="btn-secondary">Cancel</button>
+            <button id="saveBookBtn" class="btn-primary">Save Book</button>
+          </div>
+        </div>
+
+        <div id="libraryGrid" class="library-grid"></div>
+        <p id="emptyLibrary" class="empty-state">No books yet. Import a CSV or add one manually.</p>
+      </section>
+
+      <!-- STATS VIEW -->
+      <section id="view-stats" class="view hidden">
+        <h2>Your Stats</h2>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <span class="stat-num" id="statQuizzes">0</span>
+            <span class="stat-label">Quizzes taken</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-num" id="statQuestions">0</span>
+            <span class="stat-label">Questions answered</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-num" id="statAccuracy">—</span>
+            <span class="stat-label">Accuracy</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-num" id="statBooks">0</span>
+            <span class="stat-label">Books quizzed</span>
+          </div>
+        </div>
+
+        <div class="history-section">
+          <h3>Recent Sessions</h3>
+          <div id="historyList" class="history-list"></div>
+          <p id="emptyHistory" class="empty-state">No quiz history yet.</p>
+        </div>
+
+        <button id="clearHistoryBtn" class="btn-danger">Clear History</button>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
