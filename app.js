@@ -1,7 +1,8 @@
 // ── Configuration ──────────────────────────────────────────────────────────
-const ANTHROPIC_API_KEY = 'YOUR_API_KEY_HERE'; // <-- paste your key here
 const API_URL = 'https://api.anthropic.com/v1/messages';
 const MODEL = 'claude-opus-4-8';
+
+function getApiKey() { return localStorage.getItem('bb_api_key') || ''; }
 
 // ── Storage helpers ─────────────────────────────────────────────────────────
 const storage = {
@@ -98,6 +99,10 @@ function populateBookSelect() {
 
 // ── Start Quiz ───────────────────────────────────────────────────────────────
 $('startQuizBtn').addEventListener('click', async () => {
+  if (!getApiKey()) {
+    showError('quizError', 'Add your Anthropic API key in Settings first.');
+    return;
+  }
   if (library.length === 0) {
     showError('quizError', 'Add some books to your library first.');
     return;
@@ -152,7 +157,7 @@ Return ONLY a JSON array of question strings, no other text. Example:
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': ANTHROPIC_API_KEY,
+      'x-api-key': getApiKey(),
       'anthropic-version': '2023-06-01',
       'anthropic-dangerous-direct-browser-access': 'true',
     },
@@ -260,7 +265,7 @@ Return ONLY valid JSON in this exact format:
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': ANTHROPIC_API_KEY,
+      'x-api-key': getApiKey(),
       'anthropic-version': '2023-06-01',
       'anthropic-dangerous-direct-browser-access': 'true',
     },
@@ -544,5 +549,33 @@ function escHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
+// ── Settings ──────────────────────────────────────────────────────────────────
+function initSettingsView() {
+  const saved = getApiKey();
+  if (saved) $('apiKeyInput').value = saved;
+}
+
+$('saveKeyBtn').addEventListener('click', () => {
+  const key = $('apiKeyInput').value.trim();
+  if (!key) { showApiKeyStatus('Enter a key first.', false); return; }
+  localStorage.setItem('bb_api_key', key);
+  showApiKeyStatus('Key saved.', true);
+});
+
+$('clearKeyBtn').addEventListener('click', () => {
+  localStorage.removeItem('bb_api_key');
+  $('apiKeyInput').value = '';
+  showApiKeyStatus('Key cleared.', true);
+});
+
+function showApiKeyStatus(msg, ok) {
+  const el = $('apiKeyStatus');
+  el.textContent = msg;
+  el.style.color = ok ? 'var(--green)' : 'var(--red)';
+  el.classList.remove('hidden');
+  setTimeout(() => el.classList.add('hidden'), 3000);
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 updateBookCount();
+initSettingsView();

@@ -600,6 +600,18 @@ input[type="range"] {
   margin-top: 10px;
 }
 
+/* ── Settings ── */
+.settings-hint {
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+  line-height: 1.5;
+}
+
+.settings-status {
+  font-size: 0.85rem;
+  margin-top: 10px;
+}
+
 /* ── Responsive ── */
 @media (max-width: 640px) {
   .main-content { padding: 20px 18px; }

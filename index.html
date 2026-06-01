@@ -26,6 +26,9 @@
         <button class="nav-item" data-view="stats">
           <span class="nav-icon">&#9733;</span> Stats
         </button>
+        <button class="nav-item" data-view="settings">
+          <span class="nav-icon">&#9881;</span> Settings
+        </button>
       </nav>
       <div class="sidebar-footer">
         <p class="book-count"><span id="bookCountDisplay">0</span> books</p>
@@ -192,6 +195,24 @@
         </div>
 
         <button id="clearHistoryBtn" class="btn-danger">Clear History</button>
+      </section>
+
+      <!-- SETTINGS VIEW -->
+      <section id="view-settings" class="view hidden">
+        <h2>Settings</h2>
+        <div class="card">
+          <h3>Anthropic API Key</h3>
+          <p class="settings-hint">Your key is stored only in your browser's localStorage and never sent anywhere except directly to Anthropic.</p>
+          <div class="form-group" style="margin-top:16px">
+            <label for="apiKeyInput">API Key</label>
+            <input type="password" id="apiKeyInput" placeholder="sk-ant-…" />
+          </div>
+          <div class="form-actions">
+            <button id="clearKeyBtn" class="btn-secondary">Clear</button>
+            <button id="saveKeyBtn" class="btn-primary">Save Key</button>
+          </div>
+          <p id="apiKeyStatus" class="settings-status hidden"></p>
+        </div>
       </section>
 
     </main>

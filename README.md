@@ -2,10 +2,27 @@
 
 A nonfiction book retention quiz app. Import your reading history, then let AI quiz you on what you've actually retained.
 
+## Running the app
+
+You can't open `index.html` directly — browsers block API calls from `file://` URLs. Serve it locally instead:
+
+**Option A — Python (built into macOS):**
+```bash
+cd bookquiz
+python3 -m http.server 8080
+```
+
+**Option B — Node:**
+```bash
+cd bookquiz
+npx serve .
+```
+
+Then open http://localhost:8080 in your browser.
+
 ## Setup
 
-1. Open `app.js` and replace `YOUR_API_KEY_HERE` on line 2 with your [Anthropic API key](https://console.anthropic.com/).
-2. Open `index.html` in a browser (or serve locally — no build step required).
+1. Go to **Settings** and paste your [Anthropic API key](https://console.anthropic.com/). It's stored in your browser's localStorage — no code changes needed.
 
 ## Features
 
@@ -28,5 +45,5 @@ A nonfiction book retention quiz app. Import your reading history, then let AI q
 
 ## Notes
 
-- Your API key is used directly in the browser. Do not publish this repo with a real key in `app.js` — use an environment variable or a backend proxy for production use.
+- Your API key is stored in your browser's localStorage and sent directly to Anthropic. It is never in the source code.
 - All data (library, quiz history) is stored in your browser's `localStorage`.
