@@ -1,4 +1,4 @@
-# BookBrain
+# BookQuiz
 
 A nonfiction book retention quiz app. Import your reading history, then let AI quiz you on what you've actually retained.
 
