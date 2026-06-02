@@ -50,8 +50,10 @@ document.querySelectorAll('.nav-item').forEach(btn => {
     const view = btn.dataset.view;
     document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-    document.getElementById(`view-${view}`).classList.add('active');
+    document.querySelectorAll('.view').forEach(v => { v.classList.remove('active'); v.classList.add('hidden'); });
+    const target = document.getElementById(`view-${view}`);
+    target.classList.remove('hidden');
+    target.classList.add('active');
     if (view === 'library')  renderLibrary();
     if (view === 'stats')    renderStats();
   });
@@ -143,15 +145,23 @@ async function generateQuestions(book, difficulty, count) {
     apply:  'Focus on how the book\'s ideas connect to real life, current events, or the reader\'s own experience. Ask reflective or speculative questions.',
   };
 
-  const prompt = `You are a thoughtful reading guide creating a retention quiz for someone who has read a nonfiction book.
+  const prompt = `You are a thoughtful reading guide creating a multiple-choice retention quiz for someone who has read a nonfiction book.
 
 Book: "${book.title}" by ${book.author}${book.genre ? ` (${book.genre})` : ''}${book.notes ? `\nReader's notes: ${book.notes}` : ''}
 
-Generate exactly ${count} quiz questions. Difficulty: ${difficulty}.
+Generate exactly ${count} multiple-choice questions. Difficulty: ${difficulty}.
 ${diffPrompts[difficulty]}
 
-Return ONLY a JSON array of question strings, no other text. Example:
-["Question 1?", "Question 2?"]`;
+Each question must have exactly 4 options (A, B, C, D) with only one correct answer. Make the wrong answers plausible but clearly incorrect to someone who read the book.
+
+Return ONLY a JSON array in this exact format, no other text:
+[
+  {
+    "question": "Question text?",
+    "options": ["A. First option", "B. Second option", "C. Third option", "D. Fourth option"],
+    "answer": "A"
+  }
+]`;
 
   const res = await fetch(API_URL, {
     method: 'POST',
@@ -163,7 +173,7 @@ Return ONLY a JSON array of question strings, no other text. Example:
     },
     body: JSON.stringify({
       model: MODEL,
-      max_tokens: 1024,
+      max_tokens: 4096,
       messages: [{ role: 'user', content: prompt }],
     }),
   });
@@ -174,9 +184,13 @@ Return ONLY a JSON array of question strings, no other text. Example:
   }
 
   const data = await res.json();
-  const text = data.content[0].text.trim();
+  let text = data.content[0].text.trim();
+  console.log('API response:', text);
+  // Strip markdown code fences if present
+  text = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
   const start = text.indexOf('[');
   const end   = text.lastIndexOf(']');
+  if (start === -1 || end === -1) throw new Error('No valid JSON array in response. Try again.');
   return JSON.parse(text.slice(start, end + 1));
 }
 
@@ -190,51 +204,66 @@ function startQuizUI() {
 function showQuestion() {
   const i = quizState.current;
   const total = quizState.questions.length;
+  const q = quizState.questions[i];
 
   $('progressText').textContent = `Question ${i + 1} of ${total}`;
-  $('progressFill').style.width = `${((i) / total) * 100}%`;
-  $('questionText').textContent = quizState.questions[i];
-  $('answerInput').value = '';
+  $('progressFill').style.width = `${(i / total) * 100}%`;
+  $('questionText').textContent = q.question;
+  $('submitAnswerBtn').disabled = true;
   $('feedbackCard').classList.add('hidden');
   $('questionCard').classList.remove('hidden');
+
+  const list = $('optionsList');
+  list.innerHTML = '';
+  q.options.forEach((opt, idx) => {
+    const letter = ['A','B','C','D'][idx];
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.dataset.letter = letter;
+    btn.textContent = opt;
+    btn.addEventListener('click', () => {
+      list.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      $('submitAnswerBtn').disabled = false;
+    });
+    list.appendChild(btn);
+  });
 }
 
-$('submitAnswerBtn').addEventListener('click', async () => {
-  const answer = $('answerInput').value.trim();
-  if (!answer) return;
+$('submitAnswerBtn').addEventListener('click', () => {
+  const selected = $('optionsList').querySelector('.option-btn.selected');
+  if (!selected) return;
+
+  const q = quizState.questions[quizState.current];
+  const chosenLetter = selected.dataset.letter;
+  const correct = chosenLetter === q.answer;
+
+  // Highlight correct and wrong answers
+  $('optionsList').querySelectorAll('.option-btn').forEach(btn => {
+    btn.disabled = true;
+    if (btn.dataset.letter === q.answer) btn.classList.add('correct');
+    else if (btn.classList.contains('selected')) btn.classList.add('incorrect');
+  });
+
+  const correctOption = q.options.find(o => o.startsWith(q.answer + '.'));
+
+  quizState.answers.push({
+    question: q.question,
+    chosen: selected.textContent,
+    correct,
+    correctAnswer: correctOption || q.answer,
+  });
 
   $('submitAnswerBtn').disabled = true;
-  $('submitAnswerBtn').textContent = 'Evaluating…';
+  $('feedbackIcon').textContent = correct ? '✓' : '✗';
+  $('feedbackIcon').style.color = correct ? 'var(--green)' : 'var(--red)';
+  $('feedbackText').textContent = correct
+    ? 'Correct!'
+    : `The correct answer was: ${correctOption || q.answer}`;
+  $('feedbackCard').classList.remove('hidden');
 
-  try {
-    const feedback = await evaluateAnswer(
-      quizState.book,
-      quizState.questions[quizState.current],
-      answer,
-      quizState.difficulty
-    );
-
-    quizState.answers.push({
-      question: quizState.questions[quizState.current],
-      answer,
-      feedback: feedback.feedback,
-      correct: feedback.correct,
-    });
-
-    $('questionCard').classList.add('hidden');
-    $('feedbackIcon').textContent = feedback.correct ? '✓' : '✗';
-    $('feedbackIcon').style.color = feedback.correct ? 'var(--green)' : 'var(--red)';
-    $('feedbackText').textContent = feedback.feedback;
-    $('feedbackCard').classList.remove('hidden');
-
-    const isLast = quizState.current === quizState.questions.length - 1;
-    $('nextBtn').textContent = isLast ? 'See Results' : 'Next Question';
-  } catch (err) {
-    alert(`Evaluation error: ${err.message}`);
-  } finally {
-    $('submitAnswerBtn').disabled = false;
-    $('submitAnswerBtn').textContent = 'Submit Answer';
-  }
+  const isLast = quizState.current === quizState.questions.length - 1;
+  $('nextBtn').textContent = isLast ? 'See Results' : 'Next Question';
 });
 
 $('nextBtn').addEventListener('click', () => {
@@ -246,47 +275,6 @@ $('nextBtn').addEventListener('click', () => {
     finishQuiz();
   }
 });
-
-// ── Answer Evaluation ────────────────────────────────────────────────────────
-async function evaluateAnswer(book, question, answer, difficulty) {
-  const prompt = `You are evaluating a reading quiz answer. Be encouraging but honest.
-
-Book: "${book.title}" by ${book.author}
-Difficulty: ${difficulty}
-Question: ${question}
-Reader's answer: ${answer}
-
-Evaluate this answer. Consider partial credit generously — the goal is retention and reflection, not exact recall.
-
-Return ONLY valid JSON in this exact format:
-{"correct": true/false, "feedback": "2-3 sentence evaluation. Affirm what they got right, gently correct misconceptions, add one insight."}`;
-
-  const res = await fetch(API_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': getApiKey(),
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      max_tokens: 512,
-      messages: [{ role: 'user', content: prompt }],
-    }),
-  });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error?.message || `API error ${res.status}`);
-  }
-
-  const data = await res.json();
-  const text = data.content[0].text.trim();
-  const start = text.indexOf('{');
-  const end   = text.lastIndexOf('}');
-  return JSON.parse(text.slice(start, end + 1));
-}
 
 // ── Results ──────────────────────────────────────────────────────────────────
 function finishQuiz() {
@@ -304,7 +292,9 @@ function finishQuiz() {
   quizState.answers.forEach(a => {
     const div = document.createElement('div');
     div.className = `result-item ${a.correct ? 'correct' : 'incorrect'}`;
-    div.innerHTML = `<p class="result-q">${a.question}</p><p class="result-fb">${a.feedback}</p>`;
+    div.innerHTML = `
+      <p class="result-q">${escHtml(a.question)}</p>
+      <p class="result-fb">Your answer: ${escHtml(a.chosen)}${!a.correct ? `<br>Correct: ${escHtml(a.correctAnswer)}` : ''}</p>`;
     list.appendChild(div);
   });
 
